@@ -1,0 +1,14 @@
+**/*ipr
+**/*iws
+**/*iml
+target
+.springBeans
+.settings
+**/**.iml
+**.iml
+**/**.ipr
+**.ipr
+**/**.iws
+**.iws
+.idea
+
