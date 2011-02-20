@@ -7,6 +7,8 @@ import org.activiti.engine.annotations.StartProcess;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.util.Assert;
@@ -15,6 +17,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * {@link org.aopalliance.intercept.MethodInterceptor} that starts a business process
@@ -23,6 +26,10 @@ import java.util.Map;
  * @author Josh Long
  */
 public class ProcessStartingMethodInterceptor implements MethodInterceptor {
+
+	private Logger log = Logger.getLogger(getClass().getName());
+
+
 
 	/**
 	 * injected reference - can be obtained via a {@link org.activiti.spring.ProcessEngineFactoryBean}
@@ -66,7 +73,9 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 		try {
 			result = invocation.proceed();
 			Map<String, Object> vars = this.processVariablesFromAnnotations(invocation);
-			System.out.println(vars.toString());
+
+			log.info("variables for the started process: " + vars.toString()); ;
+
 			RuntimeService runtimeService = this.processEngine.getRuntimeService();
 			ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, vars);
 			String pId = pi.getId();

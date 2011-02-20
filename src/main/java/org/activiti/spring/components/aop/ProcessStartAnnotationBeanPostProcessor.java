@@ -3,6 +3,8 @@ package org.activiti.spring.components.aop;
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.annotations.ProcessVariable;
 import org.activiti.engine.annotations.StartProcess;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.framework.ProxyConfig;
 import org.springframework.aop.framework.ProxyFactory;
@@ -40,13 +42,18 @@ public class ProcessStartAnnotationBeanPostProcessor extends ProxyConfig impleme
 		this.advisor = new ProcessStartingPointcutAdvisor(this.processEngine);
 	}
 
+	private Log log = LogFactory.getLog(getClass()) ;
+
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		Class<?> targetClass = AopUtils.getTargetClass(bean);
 		if (targetClass == null) {
 			return bean;
 		}
 
+		log.debug( "testing to see whether the advisor can be applied to "+ targetClass) ;
+
 		if (AopUtils.canApply(this.advisor, targetClass)) {
+			log.debug( "applying advisor to "+targetClass) ;
 			if (bean instanceof Advised) {
 				((Advised) bean).addAdvisor(this.advisor);
 				return bean;
@@ -57,6 +64,8 @@ public class ProcessStartAnnotationBeanPostProcessor extends ProxyConfig impleme
 				proxyFactory.addAdvisor(this.advisor);
 				return proxyFactory.getProxy(this.beanClassLoader);
 			}
+
+
 		} else {
 			// cannot apply advisor
 			return bean;

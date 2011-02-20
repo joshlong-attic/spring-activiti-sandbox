@@ -1,0 +1,4 @@
+* activiti:annotation-driven will
+   -- register a BeanFactoryPostProcessor that in turn will register one registry instance
+   -- will register two BeanPostProcessors (one for the @StartProcess case, and antoher for the @State case)
+   

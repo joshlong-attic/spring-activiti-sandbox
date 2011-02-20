@@ -10,6 +10,7 @@ import org.springframework.aop.support.ComposablePointcut;
 import org.springframework.aop.support.annotation.AnnotationMethodMatcher;
 
 import java.io.Serializable;
+import java.util.logging.Logger;
 
 /**
  * configures logic to support the creation of a business process on the completion of successful
@@ -17,9 +18,10 @@ import java.io.Serializable;
  * annotation.
  *
  * @author Josh Long
- * @since 1.0
+ * @since 5.3
  */
 public class ProcessStartingPointcutAdvisor implements PointcutAdvisor, Serializable {
+
 
 	/**
 	 * the {@link org.aopalliance.intercept.MethodInterceptor} that handles launching the business process.
