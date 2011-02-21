@@ -24,10 +24,12 @@ import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.util.Assert;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 
 /**
@@ -45,7 +47,7 @@ public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior im
 
 	private volatile ConcurrentHashMap<String, ActivitiStateHandlerRegistration> registrations = new ConcurrentHashMap<String, ActivitiStateHandlerRegistration>();
 
-	private ProcessEngine processEngine ;
+	private ProcessEngine processEngine;
 
 	public void setProcessEngine(ProcessEngine processEngine) {
 		this.processEngine = processEngine;
@@ -58,7 +60,7 @@ public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior im
 
 	@Override
 	public void signal(ActivityExecution execution, String signalName, Object data) throws Exception {
-		 leave(execution);
+		leave(execution);
 	}
 
 	protected String registrationKey(String stateName, String processName) {
@@ -155,5 +157,10 @@ public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior im
 	}
 
 	public void afterPropertiesSet() throws Exception {
+		Assert.notNull(this.processEngine, "the 'processEngine' can't be null");
+		logger.info( "this bean contains a processEngine reference. "+ this.processEngine);
+		logger.info("starting " + getClass().getName());
 	}
+
+	private Logger logger = Logger.getLogger(getClass().getName());
 }
