@@ -8,7 +8,10 @@ import java.lang.annotation.*;
 @Documented
 public @interface StartTask {
 
-	
+	String userId() default "";
+
+	String taskId() ;
+
 	/**
 	 * the name of the task to start work on
 	 * @return the name of the task

@@ -15,9 +15,18 @@
  */
 package org.activiti.spring.components.registry;
 
+import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.impl.bpmn.behavior.ReceiveTaskActivityBehavior;
+import org.activiti.engine.impl.pvm.delegate.ActivityBehavior;
+import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.InitializingBean;
+
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -29,90 +38,122 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Josh Long
  * @since 1.0
  */
-public class ActivitiStateHandlerRegistry {
-    private volatile Map<String, ActivitiStateHandlerRegistration> registrations =
-            new ConcurrentHashMap<String, ActivitiStateHandlerRegistration>();
+public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior implements BeanFactoryAware, BeanNameAware, ActivityBehavior, InitializingBean {
+	private String beanName;
 
-    protected String registrationKey(String stateName, String processName) {
-        return (org.apache.commons.lang.StringUtils.defaultString(processName) +
-                ":" + org.apache.commons.lang.StringUtils.defaultString(stateName)).toLowerCase();
-    }
+	private BeanFactory beanFactory;
 
-    /**
-     * used at runtime to register state handlers as they are registered with the spring context
-     * @param registration   the {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistration}
-     */
-    public void registerActivitiStateHandler(
-            ActivitiStateHandlerRegistration registration) {
-        String regKey = registrationKey(registration.getProcessName(),
-                registration.getStateName());
-        this.registrations.put(regKey, registration);
-    }
+	private volatile ConcurrentHashMap<String, ActivitiStateHandlerRegistration> registrations = new ConcurrentHashMap<String, ActivitiStateHandlerRegistration>();
 
-    /**
-     * this is responsible for looking up components in the registry and returning the appropriate handler based
-     * on specificity of the {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistration}
-     *
-     * @param processName the process name to look for (optional)
-     * @param stateName   the state name to look for (not optional)
-     * @return all matching options
-     */
-    public Collection<ActivitiStateHandlerRegistration> findRegistrationsForProcessAndState(
-            String processName, String stateName) {
-        Collection<ActivitiStateHandlerRegistration> registrationCollection = new ArrayList<ActivitiStateHandlerRegistration>();
-        String regKeyFull = registrationKey(processName, stateName);
-        String regKeyWithJustState = registrationKey(null, stateName);
+	private ProcessEngine processEngine ;
 
-        for (String k : this.registrations.keySet())
-            if (k.contains(regKeyFull)) {
-                registrationCollection.add(this.registrations.get(k));
-            }
+	public void setProcessEngine(ProcessEngine processEngine) {
+		this.processEngine = processEngine;
+	}
 
-        if (registrationCollection.size() == 0) {
-            for (String k : this.registrations.keySet())
-                if (k.contains(regKeyWithJustState)) {
-                    registrationCollection.add(this.registrations.get(k));
-                }
-        }
+	@Override
+	public void execute(ActivityExecution execution) throws Exception {
 
-        return registrationCollection;
-    }
+	}
 
-    /**
-     * this scours the registry looking for candidate registrations that match a given process name and/ or state nanme
-     * @param processName the name of the process
-     * @param stateName the name of the state
-     * @return an unambiguous {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistry} or null
-     */
-    public ActivitiStateHandlerRegistration findRegistrationForProcessAndState( String processName, String stateName) {
+	@Override
+	public void signal(ActivityExecution execution, String signalName, Object data) throws Exception {
+		 leave(execution);
+	}
 
-        ActivitiStateHandlerRegistration r = null;
+	protected String registrationKey(String stateName, String processName) {
+		return (org.apache.commons.lang.StringUtils.defaultString(processName) +
+				":" + org.apache.commons.lang.StringUtils.defaultString(stateName)).toLowerCase();
+	}
 
-        String key = registrationKey(processName, stateName);
+	/**
+	 * used at runtime to register state handlers as they are registered with the spring context
+	 *
+	 * @param registration the {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistration}
+	 */
+	public void registerActivitiStateHandler(
+			ActivitiStateHandlerRegistration registration) {
+		String regKey = registrationKey(registration.getProcessName(),
+				registration.getStateName());
+		this.registrations.put(regKey, registration);
+	}
 
-        Collection<ActivitiStateHandlerRegistration> rs = this.findRegistrationsForProcessAndState(
-                processName, stateName);
+	/**
+	 * this is responsible for looking up components in the registry and returning the appropriate handler based
+	 * on specificity of the {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistration}
+	 *
+	 * @param processName the process name to look for (optional)
+	 * @param stateName	 the state name to look for (not optional)
+	 * @return all matching options
+	 */
+	public Collection<ActivitiStateHandlerRegistration> findRegistrationsForProcessAndState(
+			String processName, String stateName) {
+		Collection<ActivitiStateHandlerRegistration> registrationCollection = new ArrayList<ActivitiStateHandlerRegistration>();
+		String regKeyFull = registrationKey(processName, stateName);
+		String regKeyWithJustState = registrationKey(null, stateName);
 
-        for (ActivitiStateHandlerRegistration sr : rs) {
-            String kName = registrationKey(sr.getProcessName(), sr.getStateName());
-            if (key.equalsIgnoreCase(kName)) {
-                r = sr;
-                break;
-            }
-        }
+		for (String k : this.registrations.keySet())
+			if (k.contains(regKeyFull)) {
+				registrationCollection.add(this.registrations.get(k));
+			}
 
-        for (ActivitiStateHandlerRegistration sr : rs) {
-            String kName = registrationKey(null, sr.getStateName());
-            if (key.equalsIgnoreCase(kName)) {
-                r = sr;
-                break;
-            }
-        }
+		if (registrationCollection.size() == 0) {
+			for (String k : this.registrations.keySet())
+				if (k.contains(regKeyWithJustState)) {
+					registrationCollection.add(this.registrations.get(k));
+				}
+		}
 
-        if ((r == null) && (rs.size() > 0)) {
-            r = rs.iterator().next();
-        }
+		return registrationCollection;
+	}
 
-        return r;
-    }
+	/**
+	 * this scours the registry looking for candidate registrations that match a given process name and/ or state nanme
+	 *
+	 * @param processName the name of the process
+	 * @param stateName	 the name of the state
+	 * @return an unambiguous {@link org.activiti.spring.components.registry.ActivitiStateHandlerRegistry} or null
+	 */
+	public ActivitiStateHandlerRegistration findRegistrationForProcessAndState(String processName, String stateName) {
+
+		ActivitiStateHandlerRegistration r = null;
+
+		String key = registrationKey(processName, stateName);
+
+		Collection<ActivitiStateHandlerRegistration> rs = this.findRegistrationsForProcessAndState(
+				processName, stateName);
+
+		for (ActivitiStateHandlerRegistration sr : rs) {
+			String kName = registrationKey(sr.getProcessName(), sr.getStateName());
+			if (key.equalsIgnoreCase(kName)) {
+				r = sr;
+				break;
+			}
+		}
+
+		for (ActivitiStateHandlerRegistration sr : rs) {
+			String kName = registrationKey(null, sr.getStateName());
+			if (key.equalsIgnoreCase(kName)) {
+				r = sr;
+				break;
+			}
+		}
+
+		if ((r == null) && (rs.size() > 0)) {
+			r = rs.iterator().next();
+		}
+
+		return r;
+	}
+
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+		this.beanFactory = beanFactory;
+	}
+
+	public void setBeanName(String name) {
+		this.beanName = name;
+	}
+
+	public void afterPropertiesSet() throws Exception {
+	}
 }
