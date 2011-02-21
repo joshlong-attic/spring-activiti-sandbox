@@ -37,8 +37,8 @@ public class ProcessStartingBeanPostProcessorTest {
 	@Test
 	@Deployment
 	public void testReturnedProcessInstance() throws Throwable {
-		String processInstanceId = this.processInitiatingPojo.startProcessA( 22);
-		assertNotNull( "the process instance id should not be null",processInstanceId);
+		String processInstanceId = this.processInitiatingPojo.startProcessA(22);
+		assertNotNull("the process instance id should not be null", processInstanceId);
 	}
 
 	@Test
@@ -55,12 +55,23 @@ public class ProcessStartingBeanPostProcessorTest {
 		assertEquals(this.processInitiatingPojo.getMethodState(), 1);
 	}
 
+	@Deployment
+	@Test
+	public void testUsingBusinessKey() throws Throwable {
+		long id = 5;
+		String businessKey = "usersKey" + System.currentTimeMillis();
+		ProcessInstance pi = processInitiatingPojo.enrollCustomer(businessKey, id);
+		assertEquals("the business key of the resultant ProcessInstance should match " +
+				"the one specified through the AOP-intercepted method" ,businessKey, pi.getBusinessKey());
+
+	}
+
 	@Test
 	@Deployment
 	public void testLaunchingProcessInstance() {
 		long id = 343;
 		String processInstance = processInitiatingPojo.startProcessA(id);
-		Long customerId = (Long) processEngine.getRuntimeService().getVariable( processInstance , "customerId");
+		Long customerId = (Long) processEngine.getRuntimeService().getVariable(processInstance, "customerId");
 		assertEquals("the process variable should both exist and be equal to the value given, " + id, customerId, (Long) id);
 		log.info("the customerId fromt he ProcessInstance is " + customerId);
 		assertNotNull("processInstanc can't be null", processInstance);

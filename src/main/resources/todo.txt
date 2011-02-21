@@ -1,0 +1,4 @@
+- support @StartProcess, @StartTask, @EndTask
+- support a Process scope
+- support @StartProcess methods with @BusinessKey, @ProcessVariable and @ProcessVariables
+-

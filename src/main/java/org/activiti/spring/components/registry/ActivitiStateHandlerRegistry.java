@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 /**
- * this class records and manages all known {@link org.activiti.engine.annotations.ActivitiState} - responding
+ * this class records and manages all known {@link org.activiti.engine.annotations.State} - responding
  * beans in the JVM. It <em>should</em> have metadata on all methods, and what
  * those methods expect from a given invocation (ie: which process, which process variables).
  *

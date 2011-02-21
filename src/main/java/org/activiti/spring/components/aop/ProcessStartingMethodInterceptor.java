@@ -2,6 +2,8 @@ package org.activiti.spring.components.aop;
 
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.RuntimeService;
+import org.activiti.engine.annotations.BusinessKey;
+import org.activiti.engine.annotations.ProcessId;
 import org.activiti.engine.annotations.ProcessVariable;
 import org.activiti.engine.annotations.StartProcess;
 import org.activiti.engine.runtime.ProcessInstance;
@@ -10,6 +12,7 @@ import org.aopalliance.intercept.MethodInvocation;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -41,7 +44,7 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 	}
 
 	boolean shouldReturnProcessInstance(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
-		return (result instanceof ProcessInstance ||methodInvocation.getMethod().getReturnType().isAssignableFrom(ProcessInstance.class));
+		return (result instanceof ProcessInstance || methodInvocation.getMethod().getReturnType().isAssignableFrom(ProcessInstance.class));
 	}
 
 	boolean shouldReturnProcessInstanceId(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
@@ -68,10 +71,19 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 			result = invocation.proceed();
 			Map<String, Object> vars = this.processVariablesFromAnnotations(invocation);
 
+			String businessKey = this.processBusinessKey(invocation);
+
 			log.info("variables for the started process: " + vars.toString());
 
 			RuntimeService runtimeService = this.processEngine.getRuntimeService();
-			ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, vars);
+			ProcessInstance pi ;
+			if (null != businessKey && StringUtils.hasText(businessKey)) {
+				pi = runtimeService.startProcessInstanceByKey(processKey, businessKey, vars);
+				log.info("the business key for the started process is '" + businessKey + "' ");
+			} else {
+				pi = runtimeService.startProcessInstanceByKey(processKey, vars);
+			}
+
 			String pId = pi.getId();
 
 			if (invocation.getMethod().getReturnType().equals(void.class))
@@ -93,6 +105,36 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 		return result;
 	}
 
+	protected String processBusinessKey(MethodInvocation invocation) throws Throwable {
+		Map<BusinessKey, String> businessKeyAnnotations = this.mapOfAnnotationValues( BusinessKey.class ,invocation);
+		if (businessKeyAnnotations.size() == 1) {
+			BusinessKey processId = businessKeyAnnotations.keySet().iterator().next();
+			return businessKeyAnnotations.get(processId);
+		}
+		return null;
+	}
+
+	@SuppressWarnings("unchecked")
+	private <K extends Annotation, V> Map<K, V> mapOfAnnotationValues(Class<K> annotationType, MethodInvocation invocation) {
+		Method method = invocation.getMethod();
+		Annotation[][] annotations = method.getParameterAnnotations();
+		Map<K, V> vars = new HashMap<K, V>();
+		int paramIndx = 0;
+		for (Annotation[] annPerParam : annotations) {
+			for (Annotation annotation : annPerParam) {
+				if (!annotationType.isAssignableFrom(annotation.getClass())) {
+					continue;
+				}
+				K pv = (K) annotation;
+				V v = (V) invocation.getArguments()[paramIndx];
+				vars.put(pv, v);
+
+			}
+			paramIndx += 1;
+		}
+		return vars;
+	}
+
 
 	/**
 	 * if there any arguments with the {@link org.activiti.engine.annotations.ProcessVariable} annotation,
@@ -103,20 +145,14 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 	 * @throws Throwable thrown anything goes wrong
 	 */
 	protected Map<String, Object> processVariablesFromAnnotations(MethodInvocation invocation) throws Throwable {
-		Method method = invocation.getMethod();
-		Annotation[][] annotations = method.getParameterAnnotations();
-		Map<String, Object> vars = new HashMap<String, Object>();
-		int paramIndx = 0;
-		for (Annotation[] annPerParam : annotations) {
 
-			for (Annotation annotation : annPerParam) {
-				if (annotation instanceof ProcessVariable) {
-					ProcessVariable processVariable = (ProcessVariable) annotation;
-					vars.put(processVariable.value(), invocation.getArguments()[paramIndx]);
-				}
-			}
-			paramIndx += 1;
+		Map<ProcessVariable, Object> vars = this.mapOfAnnotationValues(ProcessVariable.class, invocation);
+
+		Map<String, Object> varNameToValueMap = new HashMap<String, Object>();
+		for (ProcessVariable processVariable : vars.keySet()) {
+			varNameToValueMap.put(processVariable.value(), vars.get(processVariable));
 		}
-		return vars;
+		return varNameToValueMap;
+
 	}
 }

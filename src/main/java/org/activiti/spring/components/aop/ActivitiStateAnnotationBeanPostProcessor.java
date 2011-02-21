@@ -15,10 +15,7 @@
  */
 package org.activiti.spring.components.aop;
 
-import org.activiti.engine.annotations.ActivitiState;
-import org.activiti.engine.annotations.ProcessId;
-import org.activiti.engine.annotations.ProcessVariable;
-import org.activiti.engine.annotations.ProcessVariables;
+import org.activiti.engine.annotations.*;
 import org.activiti.spring.components.registry.ActivitiStateHandlerRegistration;
 import org.activiti.spring.components.registry.ActivitiStateHandlerRegistry;
 import org.springframework.aop.support.AopUtils;
@@ -43,7 +40,7 @@ import java.util.Map;
 
 /**
  * the idea is that this bean post processor is responsible for registering all beans
- * that have the {@link ActivitiState} annotation.
+ * that have the {@link org.activiti.engine.annotations.State} annotation.
  *
  * @author Josh Long
  * @since 5.3
@@ -96,18 +93,18 @@ public class ActivitiStateAnnotationBeanPostProcessor implements BeanPostProcess
 					@SuppressWarnings("unchecked")
 					public void doWith(Method method) throws IllegalArgumentException, IllegalAccessException {
 
-						ActivitiState activitiState = AnnotationUtils.getAnnotation(method, ActivitiState.class);
+						State state = AnnotationUtils.getAnnotation(method, State.class);
 
 						String processName = component.processKey();
 
-						if (StringUtils.hasText(activitiState.process ())) {
-							processName = activitiState.process ();
+						if (StringUtils.hasText(state.process())) {
+							processName = state.process();
 						}
 
-						String stateName = activitiState.state ();
+						String stateName = state.state();
 
 						if (!StringUtils.hasText(stateName)) {
-							stateName = activitiState.value();
+							stateName = state.value();
 						}
 
 						Assert.notNull(stateName, "You must provide a stateName!");
@@ -129,7 +126,7 @@ public class ActivitiStateAnnotationBeanPostProcessor implements BeanPostProcess
 									vars.put(ctr, pvName);
 								} else if (pa instanceof ProcessVariables) {
 									pvMapIndex = ctr;
-								} else if (pa instanceof ProcessId) {
+								} else if (pa instanceof ProcessId  ) {
 									procIdIndex = ctr;
 								}
 							}
@@ -144,7 +141,7 @@ public class ActivitiStateAnnotationBeanPostProcessor implements BeanPostProcess
 				new ReflectionUtils.MethodFilter() {
 					public boolean matches(Method method) {
 						return null != AnnotationUtils.getAnnotation(method,
-								ActivitiState.class);
+								State.class);
 					}
 				});
 

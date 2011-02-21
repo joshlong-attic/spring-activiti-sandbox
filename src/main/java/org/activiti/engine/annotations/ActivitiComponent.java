@@ -34,14 +34,14 @@ import java.lang.annotation.*;
  * This is a state that will be entered from Activiti and execution will flow through to the bean
  * registered in the context as "myBean." To subscribe to that, a POJO need only implement
  * (optionally) {@link ActivitiComponent} and, on a method, add
- * {@link ActivitiState} to indicate that the method in particular is
+ * {@link State} to indicate that the method in particular is
  * tasked with responding to a state. If applied to a bean and there are no {@link org.activiti.engine.annotations.ActivitiComponent}
  * annotations present, then one option might be to automatically enlist all public methods
  * as handlers for states whose IDs or names are inferred from the method name:
  * <p/>
  * <code>public void confirmReceipt(..)</code> would be treated the same as
  * <p/>
- * <code>@ActivitiState( "confirm-receipt") public void confirmReceipt (..)</code>,
+ * <code>@State( "confirm-receipt") public void confirmReceipt (..)</code>,
  *
  * @author Josh Long
  * @since 1.0

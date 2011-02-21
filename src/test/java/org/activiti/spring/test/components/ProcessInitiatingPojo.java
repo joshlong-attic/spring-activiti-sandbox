@@ -1,11 +1,11 @@
 package org.activiti.spring.test.components;
 
 
+import org.activiti.engine.annotations.BusinessKey;
+import org.activiti.engine.annotations.ProcessId;
 import org.activiti.engine.annotations.ProcessVariable;
 import org.activiti.engine.annotations.StartProcess;
-import org.activiti.engine.impl.pvm.delegate.ActivityExecution;
 import org.activiti.engine.runtime.ProcessInstance;
-import org.apache.commons.lang.builder.ToStringBuilder;
 
 import java.util.logging.Logger;
 
@@ -41,8 +41,8 @@ public class ProcessInitiatingPojo {
 	}
 
 	@StartProcess(processKey = "waiter")
-	public ProcessInstance enrollCustomer(@ProcessVariable("customerId") long customerId ){
-		return null;
+	public ProcessInstance enrollCustomer( @BusinessKey String key,  @ProcessVariable("customerId") long customerId ){
+		return null  ;
 	}
 
 }
