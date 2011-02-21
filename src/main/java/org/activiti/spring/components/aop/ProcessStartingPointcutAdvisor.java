@@ -2,26 +2,39 @@ package org.activiti.spring.components.aop;
 
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.annotations.StartProcess;
+import org.activiti.spring.components.aop.util.MetaAnnotationMatchingPointcut;
 import org.aopalliance.aop.Advice;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.PointcutAdvisor;
 import org.springframework.aop.support.ComposablePointcut;
-import org.springframework.aop.support.annotation.AnnotationMethodMatcher;
 
 import java.io.Serializable;
-import java.util.logging.Logger;
+import java.lang.annotation.Annotation;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
- * configures logic to support the creation of a business process on the completion of successful
- * method invocations with the {@link	StartProcess}
- * annotation.
+ * AOP advice for methods annotated with (by default) {@link StartProcess}.
+ *
+ * Advised methods start a process after the method executes.
+ *
+ * Advised methods can declare a return
+ * type of {@link org.activiti.engine.runtime.ProcessInstance} and then subsequently
+ * return null. The real return ProcessInstance value will be given by the aspect.
+ * 
  *
  * @author Josh Long
  * @since 5.3
  */
 public class ProcessStartingPointcutAdvisor implements PointcutAdvisor, Serializable {
 
+
+	/**
+	 * annotations that shall be scanned
+	 */
+	private Set<Class<? extends Annotation>> annotations = new HashSet<Class<? extends Annotation>>(Arrays.asList(StartProcess.class));
 
 	/**
 	 * the {@link org.aopalliance.intercept.MethodInterceptor} that handles launching the business process.
@@ -49,11 +62,6 @@ public class ProcessStartingPointcutAdvisor implements PointcutAdvisor, Serializ
 		return new ProcessStartingMethodInterceptor(this.processEngine);
 	}
 
-	protected Pointcut buildPointcut() {
-		ComposablePointcut result = new ComposablePointcut();
-		return result.union(new AnnotationMethodMatcher(StartProcess.class));
-	}
-
 	public Pointcut getPointcut() {
 		return pointcut;
 	}
@@ -65,5 +73,20 @@ public class ProcessStartingPointcutAdvisor implements PointcutAdvisor, Serializ
 	public boolean isPerInstance() {
 		return true;
 	}
+
+	private Pointcut buildPointcut() {
+		ComposablePointcut result = null;
+		for (Class<? extends Annotation> publisherAnnotationType : this.annotations) {
+			Pointcut mpc = new MetaAnnotationMatchingPointcut(null, publisherAnnotationType);
+			if (result == null) {
+				result = new ComposablePointcut(mpc);
+			} else {
+				result.union(mpc);
+			}
+		}
+		return result;
+	}
+
+
 }
 

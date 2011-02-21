@@ -24,7 +24,7 @@ public @interface StartProcess {
 	 *
 	 * @return whether to return the process instance
 	 */
-	boolean returnProcessInstance() default false;
+//	boolean returnProcessInstance() default false;
 
 	/**
 	 * returns the ID of the {@link org.activiti.engine.runtime.ProcessInstance}. If specified, it'll only work if
@@ -39,7 +39,7 @@ public @interface StartProcess {
 	 * this could work like the {@link }
 	 * @return
 	 */
-	boolean returnProcessInstanceFuture() default  false;
+//	boolean returnProcessInstanceFuture() default  false;
 
 
 }

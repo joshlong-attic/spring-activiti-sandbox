@@ -6,6 +6,7 @@ import org.activiti.engine.annotations.StartProcess;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.aop.framework.Advised;
+import org.springframework.aop.framework.AopInfrastructureBean;
 import org.springframework.aop.framework.ProxyConfig;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.support.AopUtils;
@@ -21,18 +22,20 @@ import org.springframework.util.ClassUtils;
  * are passed to the business process.
  *
  * @author Josh Long
- * @since 1.0
+ * @since 5,3
  */
 public class ProcessStartAnnotationBeanPostProcessor extends ProxyConfig implements BeanPostProcessor, InitializingBean {
 
-	private ProcessStartingPointcutAdvisor advisor;
-
-	private volatile ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader();
+	private Log log = LogFactory.getLog(getClass()) ;
 
 	/**
 	 * the process engine as created by a {@link org.activiti.spring.ProcessEngineFactoryBean}
 	 */
 	private ProcessEngine processEngine;
+
+	private ProcessStartingPointcutAdvisor advisor;
+
+	private volatile ClassLoader beanClassLoader = ClassUtils.getDefaultClassLoader();
 
 	public void setProcessEngine(ProcessEngine processEngine) {
 		this.processEngine = processEngine;
@@ -42,32 +45,27 @@ public class ProcessStartAnnotationBeanPostProcessor extends ProxyConfig impleme
 		this.advisor = new ProcessStartingPointcutAdvisor(this.processEngine);
 	}
 
-	private Log log = LogFactory.getLog(getClass()) ;
-
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		Class<?> targetClass = AopUtils.getTargetClass(bean);
-		if (targetClass == null) {
+	 	if (bean instanceof AopInfrastructureBean) {
+			// Ignore AOP infrastructure such as scoped proxies.
 			return bean;
 		}
-
-		log.debug( "testing to see whether the advisor can be applied to "+ targetClass) ;
-
+		Class<?> targetClass = AopUtils.getTargetClass(bean);
 		if (AopUtils.canApply(this.advisor, targetClass)) {
-			log.debug( "applying advisor to "+targetClass) ;
 			if (bean instanceof Advised) {
-				((Advised) bean).addAdvisor(this.advisor);
+				((Advised) bean).addAdvisor(0, this.advisor);
 				return bean;
-			} else {
+			}
+			else {
 				ProxyFactory proxyFactory = new ProxyFactory(bean);
 				// Copy our properties (proxyTargetClass etc) inherited from ProxyConfig.
 				proxyFactory.copyFrom(this);
 				proxyFactory.addAdvisor(this.advisor);
 				return proxyFactory.getProxy(this.beanClassLoader);
 			}
-
-
-		} else {
-			// cannot apply advisor
+		}
+		else {
+			// No async proxy needed.
 			return bean;
 		}
 	}

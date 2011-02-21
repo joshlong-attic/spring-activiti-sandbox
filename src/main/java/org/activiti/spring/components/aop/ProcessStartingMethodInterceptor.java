@@ -7,8 +7,6 @@ import org.activiti.engine.annotations.StartProcess;
 import org.activiti.engine.runtime.ProcessInstance;
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.util.Assert;
@@ -17,6 +15,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
@@ -28,8 +27,6 @@ import java.util.logging.Logger;
 public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 
 	private Logger log = Logger.getLogger(getClass().getName());
-
-
 
 	/**
 	 * injected reference - can be obtained via a {@link org.activiti.spring.ProcessEngineFactoryBean}
@@ -44,19 +41,16 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 	}
 
 	boolean shouldReturnProcessInstance(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
-		return startProcess.returnProcessInstance() && (result instanceof ProcessInstance ||
-				methodInvocation.getMethod().getReturnType().isAssignableFrom(ProcessInstance.class));
+		return (result instanceof ProcessInstance ||methodInvocation.getMethod().getReturnType().isAssignableFrom(ProcessInstance.class));
 	}
 
 	boolean shouldReturnProcessInstanceId(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
-		return startProcess.returnProcessInstanceId() && (result instanceof String ||
-				methodInvocation.getMethod().getReturnType().isAssignableFrom(String.class));
+		return startProcess.returnProcessInstanceId() && (result instanceof String || methodInvocation.getMethod().getReturnType().isAssignableFrom(String.class));
 	}
 
 	@SuppressWarnings("unused")
-	boolean shouldReturnAsyncResultWithProcessInstanceId(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
-		return startProcess.returnProcessInstanceFuture() &&
-				(result instanceof AsyncResult || methodInvocation.getMethod().getReturnType().isAssignableFrom(AsyncResult.class));
+	boolean shouldReturnAsyncResultWithProcessInstance(StartProcess startProcess, MethodInvocation methodInvocation, Object result) {
+		return (result instanceof Future || methodInvocation.getMethod().getReturnType().isAssignableFrom(Future.class));
 	}
 
 	public Object invoke(MethodInvocation invocation) throws Throwable {
@@ -74,7 +68,7 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 			result = invocation.proceed();
 			Map<String, Object> vars = this.processVariablesFromAnnotations(invocation);
 
-			log.info("variables for the started process: " + vars.toString()); ;
+			log.info("variables for the started process: " + vars.toString());
 
 			RuntimeService runtimeService = this.processEngine.getRuntimeService();
 			ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey, vars);
@@ -89,11 +83,16 @@ public class ProcessStartingMethodInterceptor implements MethodInterceptor {
 			if (shouldReturnProcessInstanceId(startProcess, invocation, result))
 				return pId;
 
+			if (shouldReturnAsyncResultWithProcessInstance(startProcess, invocation, result)) {
+				return new AsyncResult<ProcessInstance>(pi);
+			}
+
 		} catch (Throwable th) {
 			throw new RuntimeException(th);
 		}
 		return result;
 	}
+
 
 	/**
 	 * if there any arguments with the {@link org.activiti.engine.annotations.ProcessVariable} annotation,
