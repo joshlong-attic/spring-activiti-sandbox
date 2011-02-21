@@ -10,12 +10,9 @@
 
         <sequenceFlow id="flow1" sourceRef="start" targetRef="print"/>
 
-
         <userTask id="print" name="user"  />
 
-
         <sequenceFlow id="flow2" sourceRef="print" targetRef="end"/>
-
 
         <endEvent id="end"/>
 

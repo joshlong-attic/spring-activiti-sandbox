@@ -31,12 +31,12 @@ public @interface ActivitiState {
 	/**
 	 * the business process name
 	 */
-	String processName() default "";
+	String process () default "";
 
 	/**
 	 * the state that the component responds to,
 	 */
-	String stateName() default "";
+	String state () default "";
 
     /**
      * by default, this will be the #stateName

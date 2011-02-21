@@ -100,11 +100,11 @@ public class ActivitiStateAnnotationBeanPostProcessor implements BeanPostProcess
 
 						String processName = component.processKey();
 
-						if (StringUtils.hasText(activitiState.processName())) {
-							processName = activitiState.processName();
+						if (StringUtils.hasText(activitiState.process ())) {
+							processName = activitiState.process ();
 						}
 
-						String stateName = activitiState.stateName();
+						String stateName = activitiState.state ();
 
 						if (!StringUtils.hasText(stateName)) {
 							stateName = activitiState.value();

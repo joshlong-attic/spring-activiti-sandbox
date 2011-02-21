@@ -15,9 +15,14 @@ public class ProcessInitiatingPojo {
 
 	private int methodState = 0;
 
+	public void reset(){
+		this.methodState=0;
+	}
+
+	/*
 	public void log (ActivityExecution execution){
 		 log.info("execution:" + ToStringBuilder.reflectionToString(execution ) ) ;
-	}
+	}*/
 
 	@StartProcess(processKey = "b")
 	public void startProcess(@ProcessVariable("customerId") long customerId) {
@@ -30,8 +35,13 @@ public class ProcessInitiatingPojo {
 		return methodState;
 	}
 
+	@StartProcess(processKey = "waiter",returnProcessInstanceId = true )
+	public String startProcessA(@ProcessVariable("customerId" ) long cId){
+		return null;
+	}
+
 	@StartProcess(processKey = "waiter")
-	public ProcessInstance startProcessA(@ProcessVariable("customerId" ) long cId){
+	public ProcessInstance enrollCustomer(@ProcessVariable("customerId") long customerId ){
 		return null;
 	}
 
