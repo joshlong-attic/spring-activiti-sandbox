@@ -41,6 +41,9 @@ import java.util.logging.Logger;
  * @since 1.0
  */
 public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior implements BeanFactoryAware, BeanNameAware, ActivityBehavior, InitializingBean {
+
+	private Logger logger = Logger.getLogger(getClass().getName());
+
 	private String beanName;
 
 	private BeanFactory beanFactory;
@@ -161,6 +164,4 @@ public class ActivitiStateHandlerRegistry extends ReceiveTaskActivityBehavior im
 		logger.info( "this bean contains a processEngine reference. "+ this.processEngine);
 		logger.info("starting " + getClass().getName());
 	}
-
-	private Logger logger = Logger.getLogger(getClass().getName());
 }
