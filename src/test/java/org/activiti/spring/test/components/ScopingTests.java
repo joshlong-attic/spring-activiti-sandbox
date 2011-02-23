@@ -20,21 +20,46 @@ public class ScopingTests {
 
 	private Logger logger = Logger.getLogger(getClass().getName());
 
-	//	@Autowired ProcessInitiatingPojo  processInitiatingPojo ;
+	//	@Autowired ProcessInitiatingPojo  scopedCustomer ;
 	@Autowired
 	ProcessEngine processEngine;
 
 	@Autowired
 	ApplicationContext applicationContext;
 
-	private ScopedCustomer processInitiatingPojo() {
-		return this.applicationContext.getBean(ScopedCustomer.class);
+	private ScopedCustomer scopedCustomer() {
+		return this.applicationContext.getBean("customer", ScopedCustomer.class);
+	}
+
+	private ProcessInitiatingPojo processInitiatingPojo() {
+		return this.applicationContext.getBean(ProcessInitiatingPojo.class);
+	}
+
+
+
+	public void testUsingAnInjectedScopedProxy() {
+
+		logger.info("---------------------------------");
+		logger.info("scoped proxy test");
+		ProcessInstance processInstance;
+
+		processInstance = this.processEngine.getRuntimeService().startProcessInstanceByKey("waiter");
+		Assert.assertNotNull(processInstance);
+		ProcessInstanceScopeContextHolder.reset();
+		ProcessInstanceScopeContextHolder.setProcessInstance(processInstance);
+
+
+		ProcessInitiatingPojo processInitiatingPojo = processInitiatingPojo();
+		processInitiatingPojo.logScopedCustomer(processInstance);
+
+		ProcessInstanceScopeContextHolder.reset();
+		logger.info("scoped proxy test");
+		logger.info("---------------------------------");
 	}
 
 	@Deployment
 	@Test
 	public void testRunningAProcessThatDependsOnAState() {
-
 
 		ProcessInstance processInstance;
 
@@ -42,33 +67,34 @@ public class ScopingTests {
 		Assert.assertNotNull(processInstance);
 		ProcessInstanceScopeContextHolder.reset();
 		ProcessInstanceScopeContextHolder.setProcessInstance(processInstance);
-		log(processInstance, processInitiatingPojo());
+		ScopedCustomer sc = scopedCustomer();
+		log(processInstance, sc);
 		ProcessInstanceScopeContextHolder.reset();
 
 		processInstance = this.processEngine.getRuntimeService().startProcessInstanceByKey("waiter");
 		Assert.assertNotNull(processInstance);
 		ProcessInstanceScopeContextHolder.reset();
 		ProcessInstanceScopeContextHolder.setProcessInstance(processInstance);
-		ScopedCustomer sc=processInitiatingPojo();
+		sc = scopedCustomer();
 		log(processInstance, sc);
-		ScopedCustomer sc1=processInitiatingPojo();
-		Assert.assertEquals(sc1.getName(), sc.getName());
+		ScopedCustomer sc1 = scopedCustomer();
 
-
+		Assert.assertEquals("successive accesses of the same object during " +
+				"a given ProcessInstance execution should yeild the same result.", sc1.getName(), sc.getName());
 
 		ProcessInstanceScopeContextHolder.reset();
 
+		testUsingAnInjectedScopedProxy();
+		testUsingAnInjectedScopedProxy();
 
 	}
 
-
-	void log(ProcessInstance processInstance, ScopedCustomer scopedCustomer) {
-
-		ScopedCustomer sc =(ScopedCustomer)
-				this.processEngine.getRuntimeService().getVariable( processInstance.getId(), "customer");
-
-		Assert.assertNotNull("scopedCustomer is null." , sc) ;
-
+	private void log(ProcessInstance processInstance, ScopedCustomer scopedCustomer) {
+		ScopedCustomer sc = (ScopedCustomer)
+				this.processEngine.getRuntimeService().getVariable(processInstance.getId(), "customer");
+		Assert.assertNotNull("scopedCustomer is null.", sc);
+		Assert.assertEquals("the scopedCustomer should be the same as the one in the Activiit context.",
+				scopedCustomer.getName(), sc.getName());
 	}
 
 }

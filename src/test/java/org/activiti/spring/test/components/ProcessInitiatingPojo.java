@@ -27,7 +27,11 @@ public class ProcessInitiatingPojo {
 		this.methodState = 0;
 	}
 
-	@Autowired private ScopedCustomer customer ;
+	public void setCustomer(ScopedCustomer customer) {
+		this.customer = customer;
+	}
+
+	private ScopedCustomer customer ;
 
 	public void logScopedCustomer( ProcessInstance processInstance ){
 		 System.out.println( "ProcessInstance ID:" + processInstance.getId() +"; Name: " + this.customer.getName() ) ;

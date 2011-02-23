@@ -3,15 +3,27 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:activiti="http://www.activiti.org/schema/spring/components"
+       xmlns:aop="http://www.springframework.org/schema/aop"
        xsi:schemaLocation="http://www.springframework.org/schema/beans   http://www.springframework.org/schema/beans/spring-beans.xsd
-                           http://www.activiti.org/schema/spring/components http://www.activiti.org/schema/spring/components/activiti.xsd">
+                           http://www.activiti.org/schema/spring/components http://www.activiti.org/schema/spring/components/activiti.xsd
+                           http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd">
+
 
 
     <activiti:annotation-driven process-engine="processEngine" />
 
-    <bean class="org.activiti.spring.test.components.ScopedCustomer" id="customer" scope="process"/>
+    <bean class="org.activiti.spring.test.components.ScopedCustomer" id="customer1" scope="process">
+        <aop:scoped-proxy/>
+    </bean>
 
-<!--    <bean class="org.activiti.spring.test.components.ProcessInitiatingPojo" id="pojo"/>-->
+     
+    <bean class="org.activiti.spring.test.components.ScopedCustomer" id="customer" scope="process">
+    </bean>
+
+    <bean class="org.activiti.spring.test.components.ProcessInitiatingPojo" id="pojo">
+        <property name="customer" ref="customer1"/>
+    </bean>
+
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
         <property name="targetDataSource">

@@ -3,6 +3,8 @@ package org.activiti.spring.components.scope;
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.RuntimeService;
 import org.activiti.engine.runtime.ProcessInstance;
+import org.springframework.aop.framework.AopProxy;
+import org.springframework.aop.scope.ScopedObject;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -45,11 +47,18 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 
 	public Object get(String name, ObjectFactory<?> objectFactory) {
 
-		logger.info ("returning scoped object having beanName '" +name +
-				"' for conversation ID '" + this.getConversationId()+ "'. ");
+		logger.info("returning scoped object having beanName '" + name +
+				"' for conversation ID '" + this.getConversationId() + "'. ");
+
+
 		Object scopedObject = runtimeService.getVariable(getProcessInstanceId(), name);
 		if (scopedObject == null) {
 			scopedObject = objectFactory.getObject();
+			if(scopedObject instanceof ScopedObject) {
+				ScopedObject sc=(ScopedObject)scopedObject ;
+				scopedObject =sc.getTargetObject();
+			}
+
 			runtimeService.setVariable(this.getProcessInstanceId(), name, scopedObject);
 		}
 		return scopedObject;
@@ -104,5 +113,7 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	public void afterPropertiesSet() throws Exception {
 		Assert.notNull(this.processEngine, "the 'processEngine' must not be null!");
 		this.runtimeService = this.processEngine.getRuntimeService();
+
+		logger.fine ( getClass() .getName() + " started.") ;
 	}
 }
