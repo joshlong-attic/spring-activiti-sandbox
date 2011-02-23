@@ -13,12 +13,6 @@
 
 package org.activiti.spring;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.zip.ZipInputStream;
-
 import org.activiti.engine.ActivitiException;
 import org.activiti.engine.ProcessEngine;
 import org.activiti.engine.RepositoryService;
@@ -36,6 +30,12 @@ import org.springframework.core.io.Resource;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.zip.ZipInputStream;
+
 
 /**
  * @author Tom Baeyens
@@ -44,126 +44,123 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 public class SpringProcessEngineConfiguration extends ProcessEngineConfigurationImpl {
 
-  protected PlatformTransactionManager transactionManager;
-  protected String deploymentName = "SpringAutoDeployment";
-  protected Resource[] deploymentResources = new Resource[0];
-  
-  
-  public SpringProcessEngineConfiguration() {
-    transactionsExternallyManaged = true;
-  }
-  
-  @Override
-  public ProcessEngine buildProcessEngine() {
-    ProcessEngine processEngine = super.buildProcessEngine();
-    autoDeployResources(processEngine);
-    return processEngine;
-  }
-  
-  protected Collection< ? extends CommandInterceptor> getDefaultCommandInterceptorsTxRequired() {
-    if (transactionManager==null) {
-      throw new ActivitiException("transactionManager is required property for SpringProcessEngineConfiguration, use "+StandaloneProcessEngineConfiguration.class.getName()+" otherwise");
-    }
-    
-    List<CommandInterceptor> defaultCommandInterceptorsTxRequired = new ArrayList<CommandInterceptor>();
-    defaultCommandInterceptorsTxRequired.add(new LogInterceptor());
-    defaultCommandInterceptorsTxRequired.add(new SpringTransactionInterceptor(transactionManager, TransactionTemplate.PROPAGATION_REQUIRED));
-    CommandContextInterceptor commandContextInterceptor = new CommandContextInterceptor(commandContextFactory, this);
-    defaultCommandInterceptorsTxRequired.add(commandContextInterceptor);
-    defaultCommandInterceptorsTxRequired.add(new CommandExecutorImpl());
-    return defaultCommandInterceptorsTxRequired;
-  }
-  
-  protected Collection< ? extends CommandInterceptor> getDefaultCommandInterceptorsTxRequiresNew() {
-    List<CommandInterceptor> defaultCommandInterceptorsTxRequiresNew = new ArrayList<CommandInterceptor>();
-    defaultCommandInterceptorsTxRequiresNew.add(new LogInterceptor());
-    defaultCommandInterceptorsTxRequiresNew.add(new SpringTransactionInterceptor(transactionManager, TransactionTemplate.PROPAGATION_REQUIRES_NEW));
-    CommandContextInterceptor commandContextInterceptor = new CommandContextInterceptor(commandContextFactory, this);
-    defaultCommandInterceptorsTxRequiresNew.add(commandContextInterceptor);
-    defaultCommandInterceptorsTxRequiresNew.add(new CommandExecutorImpl());
-    return defaultCommandInterceptorsTxRequiresNew;
-  }
-  
-  @Override
-  protected void initTransactionContextFactory() {
-    if(transactionContextFactory == null && transactionManager != null) {
-      transactionContextFactory = new SpringTransactionContextFactory(transactionManager);
-    }
-  }
-  
-  @Override
-  protected void initJpa() {
-    super.initJpa();
-    if (jpaEntityManagerFactory != null) {
-      sessionFactories.put(EntityManagerSession.class, 
-              new SpringEntityManagerSessionFactory(jpaEntityManagerFactory, jpaHandleTransaction, jpaCloseEntityManager));
-    }
-  }
+	protected PlatformTransactionManager transactionManager;
+	protected String deploymentName = "SpringAutoDeployment";
+	protected Resource[] deploymentResources = new Resource[0];
 
-  protected void autoDeployResources(ProcessEngine processEngine) {
-    if (deploymentResources!=null && deploymentResources.length>0) {
-      RepositoryService repositoryService = processEngine.getRepositoryService();
-      
-      DeploymentBuilder deploymentBuilder = repositoryService
-        .createDeployment()
-        .enableDuplicateFiltering()
-        .name(deploymentName);
-      
-      for (Resource resource : deploymentResources) {
-        String resourceName = null;
-        
-        if (resource instanceof ContextResource) {
-          resourceName = ((ContextResource) resource).getPathWithinContext();
-          
-        } else if (resource instanceof ByteArrayResource) {
-          resourceName = resource.getDescription();
-          
-        } else {
-          try {
-            resourceName = resource.getFile().getAbsolutePath();
-          } catch (IOException e) {
-            resourceName = resource.getFilename();
-          }
-        }
-        
-        try {
-          if ( resourceName.endsWith(".bar")
-               || resourceName.endsWith(".zip")
-               || resourceName.endsWith(".jar") ) {
-            deploymentBuilder.addZipInputStream(new ZipInputStream(resource.getInputStream()));
-          } else {
-            deploymentBuilder.addInputStream(resourceName, resource.getInputStream());
-          }
-        } catch (IOException e) {
-          throw new ActivitiException("couldn't auto deploy resource '"+resource+"': "+e.getMessage(), e);
-        }
-      }
-      
-      deploymentBuilder.deploy();
-    }
-  }
-  
-  public PlatformTransactionManager getTransactionManager() {
-    return transactionManager;
-  }
-  
-  public void setTransactionManager(PlatformTransactionManager transactionManager) {
-    this.transactionManager = transactionManager;
-  }
 
-  public String getDeploymentName() {
-    return deploymentName;
-  }
-  
-  public void setDeploymentName(String deploymentName) {
-    this.deploymentName = deploymentName;
-  }
-  
-  public Resource[] getDeploymentResources() {
-    return deploymentResources;
-  }
-  
-  public void setDeploymentResources(Resource[] deploymentResources) {
-    this.deploymentResources = deploymentResources;
-  }
+	public SpringProcessEngineConfiguration() {
+		transactionsExternallyManaged = true;
+	}
+
+	@Override
+	public ProcessEngine buildProcessEngine() {
+		ProcessEngine processEngine = super.buildProcessEngine();
+		autoDeployResources(processEngine);
+		return processEngine;
+	}
+
+	private Collection<? extends CommandInterceptor> buildInterceptorsList(int txPropagationAttribute) {
+		List<CommandInterceptor> interceptorList = new ArrayList<CommandInterceptor>();
+		interceptorList.add(new LogInterceptor());
+		interceptorList.add(new SpringTransactionInterceptor(transactionManager, txPropagationAttribute));
+		interceptorList.add(new SpringScopeInterceptor(this.getRuntimeService()));
+		interceptorList.add(new CommandContextInterceptor(commandContextFactory, this));
+		interceptorList.add(new CommandExecutorImpl());
+		return interceptorList;
+	}
+
+	protected Collection<? extends CommandInterceptor> getDefaultCommandInterceptorsTxRequired() {
+		if (transactionManager == null) {
+			throw new ActivitiException("transactionManager is a required property for " + getClass().getName() + ", use " + StandaloneProcessEngineConfiguration.class.getName() + " otherwise");
+		}
+		return buildInterceptorsList(TransactionTemplate.PROPAGATION_REQUIRED);
+	}
+
+	protected Collection<? extends CommandInterceptor> getDefaultCommandInterceptorsTxRequiresNew() {
+		return buildInterceptorsList(TransactionTemplate.PROPAGATION_REQUIRES_NEW);
+	}
+
+	@Override
+	protected void initTransactionContextFactory() {
+		if (transactionContextFactory == null && transactionManager != null) {
+			transactionContextFactory = new SpringTransactionContextFactory(transactionManager);
+		}
+	}
+
+	@Override
+	protected void initJpa() {
+		super.initJpa();
+		if (jpaEntityManagerFactory != null) {
+			sessionFactories.put(EntityManagerSession.class,
+					new SpringEntityManagerSessionFactory(jpaEntityManagerFactory, jpaHandleTransaction, jpaCloseEntityManager));
+		}
+	}
+
+	protected void autoDeployResources(ProcessEngine processEngine) {
+		if (deploymentResources != null && deploymentResources.length > 0) {
+			RepositoryService repositoryService = processEngine.getRepositoryService();
+
+			DeploymentBuilder deploymentBuilder = repositoryService
+					.createDeployment()
+					.enableDuplicateFiltering()
+					.name(deploymentName);
+
+			for (Resource resource : deploymentResources) {
+				String resourceName = null;
+
+				if (resource instanceof ContextResource) {
+					resourceName = ((ContextResource) resource).getPathWithinContext();
+
+				} else if (resource instanceof ByteArrayResource) {
+					resourceName = resource.getDescription();
+
+				} else {
+					try {
+						resourceName = resource.getFile().getAbsolutePath();
+					} catch (IOException e) {
+						resourceName = resource.getFilename();
+					}
+				}
+
+				try {
+					if (resourceName.endsWith(".bar")
+							|| resourceName.endsWith(".zip")
+							|| resourceName.endsWith(".jar")) {
+						deploymentBuilder.addZipInputStream(new ZipInputStream(resource.getInputStream()));
+					} else {
+						deploymentBuilder.addInputStream(resourceName, resource.getInputStream());
+					}
+				} catch (IOException e) {
+					throw new ActivitiException("couldn't auto deploy resource '" + resource + "': " + e.getMessage(), e);
+				}
+			}
+
+			deploymentBuilder.deploy();
+		}
+	}
+
+	public PlatformTransactionManager getTransactionManager() {
+		return transactionManager;
+	}
+
+	public void setTransactionManager(PlatformTransactionManager transactionManager) {
+		this.transactionManager = transactionManager;
+	}
+
+	public String getDeploymentName() {
+		return deploymentName;
+	}
+
+	public void setDeploymentName(String deploymentName) {
+		this.deploymentName = deploymentName;
+	}
+
+	public Resource[] getDeploymentResources() {
+		return deploymentResources;
+	}
+
+	public void setDeploymentResources(Resource[] deploymentResources) {
+		this.deploymentResources = deploymentResources;
+	}
 }
