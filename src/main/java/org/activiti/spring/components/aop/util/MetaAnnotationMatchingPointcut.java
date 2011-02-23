@@ -9,7 +9,7 @@ import org.springframework.util.Assert;
 import java.lang.annotation.Annotation;
 
 /**
- * this code is taken almost verbatim from the Spring Integration
+ * this code is taken almost (99.99%) verbatim from the Spring Integration
  * project's source code where it's a static
  * private inner class.
  *

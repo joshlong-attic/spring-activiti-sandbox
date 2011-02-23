@@ -7,6 +7,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.CustomScopeConfigurer;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
@@ -24,10 +25,8 @@ public class ProcessStartingBeanPostProcessorTest {
 
 	private Logger log = Logger.getLogger(getClass().getName());
 
-	@Autowired
-	private ProcessEngine processEngine;
-	@Autowired
-	private ProcessInitiatingPojo processInitiatingPojo;
+	@Autowired private ProcessEngine processEngine;
+	@Autowired private ProcessInitiatingPojo processInitiatingPojo;
 
 	@After
 	public void closeProcessEngine() {

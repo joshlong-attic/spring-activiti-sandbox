@@ -5,6 +5,9 @@ import org.activiti.engine.annotations.BusinessKey;
 import org.activiti.engine.annotations.ProcessVariable;
 import org.activiti.engine.annotations.StartProcess;
 import org.activiti.engine.runtime.ProcessInstance;
+import org.activiti.spring.components.scope.ProcessScope;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 
 import java.util.logging.Logger;
 
@@ -22,6 +25,12 @@ public class ProcessInitiatingPojo {
 
 	public void reset() {
 		this.methodState = 0;
+	}
+
+	@Autowired private ScopedCustomer customer ;
+
+	public void logScopedCustomer( ProcessInstance processInstance ){
+		 System.out.println( "ProcessInstance ID:" + processInstance.getId() +"; Name: " + this.customer.getName() ) ;
 	}
 
 	@StartProcess(processKey = "b")

@@ -3,13 +3,13 @@ package org.activiti.spring.components.config.xml;
 
 import org.activiti.spring.components.ActivitiContextUtils;
 import org.activiti.spring.components.aop.ProcessStartAnnotationBeanPostProcessor;
+import org.activiti.spring.components.scope.ProcessScope;
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanDefinitionHolder;
 import org.springframework.beans.factory.config.RuntimeBeanReference;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.BeanDefinitionReaderUtils;
-import org.springframework.beans.factory.support.RootBeanDefinition;
 import org.springframework.beans.factory.xml.BeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
 import org.springframework.core.Conventions;
@@ -30,6 +30,7 @@ public class ActivitiAnnotationDrivenBeanDefinitionParser implements BeanDefinit
 	private final String processEngineAttribute = "process-engine";
 
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		registerProcessScope(element, parserContext);
 		registerStateHandlerAnnotationBeanFactoryPostProcessor(element, parserContext);
 		registerProcessStartAnnotationBeanPostProcessor(element, parserContext);
 		return null;
@@ -53,15 +54,26 @@ public class ActivitiAnnotationDrivenBeanDefinitionParser implements BeanDefinit
 
 	}
 
+	private void registerProcessScope(Element element, ParserContext parserContext) {
+		Class clz = ProcessScope.class;
+		BeanDefinitionBuilder processScopeBDBuilder = BeanDefinitionBuilder.genericBeanDefinition(clz);
+		AbstractBeanDefinition scopeBeanDefinition = processScopeBDBuilder.getBeanDefinition();
+		scopeBeanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		configureProcessEngine(scopeBeanDefinition, element);
+		String beanName = baseBeanName(clz);
+		parserContext.getRegistry().registerBeanDefinition(beanName, scopeBeanDefinition);
+	}
+
 	private void registerProcessStartAnnotationBeanPostProcessor(Element element, ParserContext parserContext) {
 		Class clz = ProcessStartAnnotationBeanPostProcessor.class;
-		RootBeanDefinition rootBeanDefinition = new RootBeanDefinition(clz.getName());
-		rootBeanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 
-		configureProcessEngine(rootBeanDefinition, element);
+		BeanDefinitionBuilder beanDefinitionBuilder = BeanDefinitionBuilder.genericBeanDefinition(clz);
+		AbstractBeanDefinition beanDefinition = beanDefinitionBuilder.getBeanDefinition();
+		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		configureProcessEngine(beanDefinition, element);
 
 		String beanName = baseBeanName(clz);
-		parserContext.getRegistry().registerBeanDefinition(beanName, rootBeanDefinition);
+		parserContext.getRegistry().registerBeanDefinition(beanName, beanDefinition);
 	}
 
 	private String baseBeanName(Class cl) {
