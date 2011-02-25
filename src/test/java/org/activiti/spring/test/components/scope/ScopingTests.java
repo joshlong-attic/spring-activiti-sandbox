@@ -16,10 +16,9 @@ import java.util.logging.Logger;
 @ContextConfiguration("classpath:org/activiti/spring/test/components/ScopingTests-context.xml")
 public class ScopingTests {
 
-	Logger logger = Logger.getLogger(getClass().getName());
+	@Autowired private ProcessEngine processEngine;
 
-	@Autowired
-	ProcessEngine processEngine;
+	private Logger logger = Logger.getLogger(getClass().getName());
 
 	@Test
 	public void testUsingAnInjectedScopedProxy() {
@@ -34,4 +33,6 @@ public class ScopingTests {
 
 		Assert.assertEquals(scopedObject.getVisitedCount(), 2);
 	}
+
+
 }
