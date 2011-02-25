@@ -24,9 +24,11 @@ import java.util.logging.Logger;
  */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration("classpath:org/activiti/spring/test/components/ScopingTests-context.xml")
-public class ScopingTests {
+public class ScopingTest {
 
 	@Autowired private ProcessInitiatingPojo processInitiatingPojo ;
+
+	private Logger logger = Logger.getLogger(getClass().getName());
 
 	@Autowired
 	private ProcessEngine processEngine;
@@ -37,8 +39,6 @@ public class ScopingTests {
 	public void before() throws Throwable {
 		this.taskService = this.processEngine.getTaskService();
 	}
-
-	private Logger logger = Logger.getLogger(getClass().getName());
 
 	private StatefulObject run() throws Throwable {
 		logger.info("----------------------------------------------");
