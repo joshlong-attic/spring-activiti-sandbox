@@ -4,15 +4,18 @@ import java.io.Serializable;
 import java.util.logging.Logger;
 
 /**
- * holds state
+ * dumb object to demonstrate holding scoped state for the duration of a business process
  *
  * @author Josh Long
  */
 public class StatefulObject implements Serializable {
-	private String name;
-	private int visitedCount = 0;
 
 	private transient Logger logger = Logger.getLogger(getClass().getName());
+
+	public static final long serialVersionUID = 1L;
+
+	private String name;
+	private int visitedCount = 0;
 
 	public StatefulObject() {
 	}
@@ -46,7 +49,6 @@ public class StatefulObject implements Serializable {
 	}
 
 	public void increment() {
-		logger.info(this.toString() ) ;
 		this.visitedCount += 1;
 	}
 
@@ -61,7 +63,5 @@ public class StatefulObject implements Serializable {
 	public void setName(String name) {
 		this.name = name;
 	}
-
-	public static final long serialVersionUID = 1L;
 
 }

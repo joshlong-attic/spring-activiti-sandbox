@@ -14,6 +14,15 @@ import org.springframework.util.ClassUtils;
 import java.lang.reflect.Method;
 import java.util.logging.Logger;
 
+/**
+ * provides notifications whenever a method has had a method invoked which <em>hopefully</em> represents all
+ * state change events for the object.
+ * <p/>
+ * This will <em>not</em> work on direct field accesseso or changes.
+ *
+ * @author Josh Long
+ * @since 5.3
+ */
 public class DirtyMonitorProxyFactoryBean extends ProxyConfig implements MethodInterceptor, FactoryBean<Object> {
 
 	private Logger logger = Logger.getLogger(getClass().getName());
@@ -77,76 +86,7 @@ public class DirtyMonitorProxyFactoryBean extends ProxyConfig implements MethodI
 
 	public Object invoke(MethodInvocation methodInvocation) throws Throwable {
 		Object result = methodInvocation.proceed();
-		logger.fine("a method has been called on " + methodInvocation.getThis() + ": " + methodInvocation.getMethod().getName());
 		this.objectDirtiedListener.onMethodInvoked(this.objectToMonitor, methodInvocation.getMethod());
 		return result;
 	}
 }
-
-/*
-class DirtyMonitorFactoryBean extends ProxyConfig implements MethodInterceptor, FactoryBean {
-
-	private ClassLoader beanClassLoader;
-	private Advisor advisor;
-	private ExecutionEntity executionEntity;
-	private Object scopedObject;
-	private String name;
-
-	private Logger logger = Logger.getLogger(getClass().getName());
-
-	public Object getObject() throws Exception {
-		return createDirtyMonitorProxy(this.scopedObject);
-	}
-
-	public Class<?> getObjectType() {
-		return Object.class;
-	}
-
-	public boolean isSingleton() {
-		return false;
-	}
-
-	public DirtyMonitorFactoryBean(ExecutionEntity executionEntity, String name, Object scopedObj) {
-		this.beanClassLoader = ClassUtils.getDefaultClassLoader();
-		this.executionEntity = executionEntity;
-		this.scopedObject = scopedObj;
-		this.name = name;
-
-		this.setProxyTargetClass(true);
-		advisor = new Advisor() {
-			public Advice getAdvice() {
-				return DirtyMonitorFactoryBean.this;
-			}
-
-			public boolean isPerInstance() {
-				return true;
-			}
-		};
-	}
-
-	private Object createDirtyMonitorProxy(Object bean) {
-
-		Class<?> targetClass = AopUtils.getTargetClass(bean);
-		if (AopUtils.canApply(this.advisor, targetClass)) {// always true since we have no pointcut
-			if (bean instanceof Advised) {
-				((Advised) bean).addAdvisor(0, this.advisor);
-				return bean;
-			} else {
-				ProxyFactory proxyFactory = new ProxyFactory(bean);
-				proxyFactory.copyFrom(this );
-				proxyFactory.addAdvisor(this.advisor);
-				return proxyFactory.getProxy(this.beanClassLoader);
-			}
-		} else {
-			return bean;
-		}
-	}
-
-	public Object invoke(MethodInvocation methodInvocation) throws Throwable {
-		Object result = methodInvocation.proceed();
-		logger.info("a method has been called on " +methodInvocation.getThis()+": "+ methodInvocation.getMethod().getName());
-		this.executionEntity.setVariable(this.name, scopedObject);
-		return result;
-	}
-}
-*/
