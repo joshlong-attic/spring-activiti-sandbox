@@ -13,7 +13,7 @@
     <activiti:annotation-driven process-engine="processEngine" />
 
     <bean class="org.activiti.spring.test.components.scope.StatefulObject" id="c1" scope="process">
-        <aop:scoped-proxy/>
+        <!--<aop:scoped-proxy/>-->
     </bean>
 
 

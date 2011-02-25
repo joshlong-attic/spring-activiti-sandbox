@@ -25,7 +25,6 @@ import java.util.logging.Logger;
  */
 public class DirtyMonitorProxyFactoryBean extends ProxyConfig implements MethodInterceptor, FactoryBean<Object> {
 
-	private Logger logger = Logger.getLogger(getClass().getName());
 	private ClassLoader beanClassLoader;
 	private Object objectToMonitor;
 	private ObjectDirtiedListener objectDirtiedListener;

@@ -5,20 +5,25 @@ import org.activiti.engine.RuntimeService;
 import org.activiti.engine.impl.context.Context;
 import org.activiti.engine.impl.runtime.ExecutionEntity;
 import org.activiti.engine.runtime.ProcessInstance;
-import org.activiti.spring.components.aop.util.DirtyMonitorProxyFactoryBean;
+import org.activiti.spring.components.aop.util.Scopifier;
+import org.aopalliance.intercept.MethodInterceptor;
+import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.aop.scope.ScopedObject;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectFactory;
+import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.config.Scope;
+import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.util.Assert;
+import org.springframework.util.ClassUtils;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.logging.Logger;
 
 /**
@@ -31,27 +36,20 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 
 	public final static String PROCESS_SCOPE_NAME = "process";
 
+	private ClassLoader classLoader = ClassUtils.getDefaultClassLoader();
+
+	private boolean proxyTargetClass = true;
+
 	private Logger logger = Logger.getLogger(getClass().getName());
 
 	private ProcessEngine processEngine;
 
 	private RuntimeService runtimeService;
 
-	/**
-	 * this is set by reflection in the {@link org.activiti.spring.components.config.xml.ActivitiNamespaceHandler}
-	 *
-	 * @param processEngine the in-use {@link ProcessEngine}
-	 */
+	// set through Namespace reflection if nothing else
 	@SuppressWarnings("unused")
 	public void setProcessEngine(ProcessEngine processEngine) {
 		this.processEngine = processEngine;
-	}
-
-	private void persistVariable( String variableName, Object scopedObject){
-		ProcessInstance processInstance = Context.getExecutionContext().getProcessInstance();
-		ExecutionEntity	executionEntity = (ExecutionEntity) processInstance;
-		Assert.isTrue(scopedObject instanceof Serializable, "the scopedObject is not " + Serializable.class.getName() + "!");
-		executionEntity.setVariable( variableName, scopedObject);
 	}
 
 	public Object get(String name, ObjectFactory<?> objectFactory) {
@@ -71,25 +69,21 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 					scopedObject = sc.getTargetObject();
 					logger.fine("de-referencing " + ScopedObject.class.getName() + "#targetObject before persisting variable");
 				}
-				persistVariable(name , scopedObject);
+				persistVariable(name, scopedObject);
 			}
-			return createDirtyCheckingProxy( name, scopedObject);
-
+			return createDirtyCheckingProxy(name, scopedObject);
 		} catch (Throwable th) {
 			logger.warning("couldn't return value from process scope! " + ExceptionUtils.getFullStackTrace(th));
 		} finally {
-
-			Assert.notNull(executionEntity, "executionEntity can't be null");
-
-			if (executionEntity != null) logger.fine("set variable '" + name + "' on executionEntity# " + executionEntity.getId());
+			if (executionEntity != null) {
+				logger.fine("set variable '" + name + "' on executionEntity# " + executionEntity.getId());
+			}
 		}
 		return null;
 	}
 
-	// todo
 	public void registerDestructionCallback(String name, Runnable callback) {
-		logger.info("no support for registering descruction callbacks " +
-				"implemented currently. registerDestructionCallback('" + name + "',callback) will do nothing.");
+		logger.fine("no support for registering descruction callbacks implemented currently. registerDestructionCallback('" + name + "',callback) will do nothing.");
 	}
 
 	private String getExecutionId() {
@@ -103,14 +97,17 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 
 	public Object resolveContextualObject(String key) {
 
-		if ("processInstance".equalsIgnoreCase(key))
+		if ("processInstance".equalsIgnoreCase(key)) {
 			return getExecutionId();
+		}
 
-		if ("processInstanceId".equalsIgnoreCase(key))
+		if ("processInstanceId".equalsIgnoreCase(key)) {
 			return getExecutionId();
+		}
 
-		if ("processEngine".equalsIgnoreCase(key))
+		if ("processEngine".equalsIgnoreCase(key)) {
 			return this.processEngine;
+		}
 
 		return null;
 	}
@@ -121,6 +118,21 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 		beanFactory.registerScope(ProcessScope.PROCESS_SCOPE_NAME, this);
+
+		Assert.state(beanFactory instanceof BeanDefinitionRegistry, "BeanFactory was not a BeanDefinitionRegistry, so ProcessScope cannot be used.");
+
+		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
+
+		for (String beanName : beanFactory.getBeanDefinitionNames()) {
+			BeanDefinition definition = beanFactory.getBeanDefinition(beanName);
+			// Replace this or any of its inner beans with scoped proxy if it has this scope
+			boolean scoped = PROCESS_SCOPE_NAME.equals(definition.getScope());
+			Scopifier scopifier = new Scopifier(registry, PROCESS_SCOPE_NAME, proxyTargetClass, scoped);
+			scopifier.visitBeanDefinition(definition);
+			if (scoped) {
+				Scopifier.createScopedProxy(beanName, definition, registry, proxyTargetClass);
+			}
+		}
 	}
 
 	public void destroy() throws Exception {
@@ -128,23 +140,28 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	}
 
 	public void afterPropertiesSet() throws Exception {
-
 		Assert.notNull(this.processEngine, "the 'processEngine' must not be null!");
-
 		this.runtimeService = this.processEngine.getRuntimeService();
-
-		logger.fine(getClass().getName() + " started.");
 	}
 
-	private Object createDirtyCheckingProxy(  final String name, final Object scopedObject) throws Throwable {
-		DirtyMonitorProxyFactoryBean dirtyMonitorProxyFactoryBean = new DirtyMonitorProxyFactoryBean(scopedObject, new DirtyMonitorProxyFactoryBean.ObjectDirtiedListener() {
-			public void onMethodInvoked(Object o, Method method) {
-
-				logger.info( "object " + o.toString() + " has had a method invoked, '" + method.getName() + "'");
-
+	private Object createDirtyCheckingProxy(final String name, final Object scopedObject) throws Throwable {
+		ProxyFactory proxyFactoryBean = new ProxyFactory(scopedObject);
+		proxyFactoryBean.setProxyTargetClass(this.proxyTargetClass);
+		proxyFactoryBean.addAdvice(new MethodInterceptor() {
+			public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+				Object result = methodInvocation.proceed();
 				persistVariable(name, scopedObject);
+				return result;
 			}
 		});
-		return dirtyMonitorProxyFactoryBean.getObject();
+		return proxyFactoryBean.getProxy(this.classLoader);
+	}
+
+	private void persistVariable(String variableName, Object scopedObject) {
+		ProcessInstance processInstance = Context.getExecutionContext().getProcessInstance();
+		ExecutionEntity executionEntity = (ExecutionEntity) processInstance;
+		Assert.isTrue(scopedObject instanceof Serializable, "the scopedObject is not " + Serializable.class.getName() + "!");
+		executionEntity.setVariable(variableName, scopedObject);
 	}
 }
+
