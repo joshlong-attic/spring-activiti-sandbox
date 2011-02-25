@@ -38,8 +38,6 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	private RuntimeService runtimeService;
 
 	/**
-	 * REQUIRED
-	 * <p/>
 	 * this is set by reflection in the {@link org.activiti.spring.components.config.xml.ActivitiNamespaceHandler}
 	 *
 	 * @param processEngine the in-use {@link ProcessEngine}
@@ -52,7 +50,7 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	private void persistVariable( String variableName, Object scopedObject){
 		ProcessInstance processInstance = Context.getExecutionContext().getProcessInstance();
 		ExecutionEntity	executionEntity = (ExecutionEntity) processInstance;
-		Assert.isTrue(scopedObject instanceof Serializable, "the scopedObject is not " + Serializable.class.getName()+ "!");
+		Assert.isTrue(scopedObject instanceof Serializable, "the scopedObject is not " + Serializable.class.getName() + "!");
 		executionEntity.setVariable( variableName, scopedObject);
 	}
 
@@ -95,7 +93,7 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	}
 
 	private String getExecutionId() {
-		return ProcessInstanceScopeContextHolder.getCurrentExecutionId();
+		return Context.getExecutionContext().getExecution().getId();
 	}
 
 	public Object remove(String name) {
