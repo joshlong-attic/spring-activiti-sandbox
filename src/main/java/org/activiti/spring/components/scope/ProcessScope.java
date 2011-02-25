@@ -43,10 +43,13 @@ import java.io.Serializable;
 import java.util.logging.Logger;
 
 /**
- * binds variables to a currently executing Activiti business process -- a
- * {@link org.activiti.engine.runtime.ProcessInstance}.
+ * binds variables to a currently executing Activiti business process (a {@link org.activiti.engine.runtime.ProcessInstance}).
+ *
+ * Parts of this code are lifted wholesale from Dave Syer's work on the Spring 3.1 RefreshScope.
  *
  * @author Josh Long
+ * @since 5.3
+ *
  */
 public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostProcessor, DisposableBean {
 
