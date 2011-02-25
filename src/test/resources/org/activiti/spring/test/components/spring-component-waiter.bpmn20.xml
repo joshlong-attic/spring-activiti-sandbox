@@ -23,7 +23,15 @@
 
         <sequenceFlow id="f4" sourceRef="n4" targetRef="n5"/>
 
-    <endEvent id="n5" />
+    <serviceTask id="n5" activiti:delegateExpression="${delegate2}" />
+
+        <sequenceFlow id="f5" sourceRef="n5" targetRef="n6" />
+
+    <userTask id="n6" name="user"  />
+
+        <sequenceFlow id="f6" sourceRef="n6" targetRef="n7"/>
+
+    <endEvent id="n7" />
 
   </process>
 

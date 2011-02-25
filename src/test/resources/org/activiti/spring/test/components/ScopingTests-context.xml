@@ -18,6 +18,8 @@
 
     <bean class="org.activiti.spring.test.components.scope.Delegate2" id="delegate2"/>
 
+    <bean class="org.activiti.spring.test.components.ProcessInitiatingPojo" id="pojo" />
+
 
     <bean id="dataSource" class="org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy">
         <property name="targetDataSource">

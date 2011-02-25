@@ -1,8 +1,12 @@
 package org.activiti.spring.test.components.scope;
 
 import org.activiti.engine.ProcessEngine;
+import org.activiti.engine.TaskService;
 import org.activiti.engine.runtime.ProcessInstance;
+import org.activiti.engine.task.Task;
+import org.activiti.spring.test.components.ProcessInitiatingPojo;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,29 +14,76 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.StringUtils;
 
+import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * tests the scoped beans
+ *
+ * @author Josh Long
+ */
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration("classpath:org/activiti/spring/test/components/ScopingTests-context.xml")
 public class ScopingTests {
 
-	@Autowired private ProcessEngine processEngine;
+	@Autowired private ProcessInitiatingPojo processInitiatingPojo ;
+
+	@Autowired
+	private ProcessEngine processEngine;
+
+	private TaskService taskService;
+
+	@Before
+	public void before() throws Throwable {
+		this.taskService = this.processEngine.getTaskService();
+	}
 
 	private Logger logger = Logger.getLogger(getClass().getName());
 
-	@Test
-	public void testUsingAnInjectedScopedProxy() {
-		logger.info("Running 'component-waiter' process instance with scoped beans.");
+	private StatefulObject run() throws Throwable {
+		logger.info("----------------------------------------------");
 		ProcessInstance processInstance = processEngine.getRuntimeService().startProcessInstanceByKey("component-waiter");
-
 		StatefulObject scopedObject = (StatefulObject) processEngine.getRuntimeService().getVariable(processInstance.getId(), "scopedTarget.c1");
-
 		Assert.assertNotNull("the scopedObject can't be null", scopedObject);
-
 		Assert.assertTrue("the 'name' property can't be null.", StringUtils.hasText(scopedObject.getName()));
-
 		Assert.assertEquals(scopedObject.getVisitedCount(), 2);
+
+		// the process has paused
+
+		String procId = processInstance.getProcessInstanceId();
+
+		List<Task> tasks = taskService.createTaskQuery().executionId(procId).list();
+
+		Assert.assertEquals("there should be 1 (one) task enqueued at this point.", tasks.size(), 1);
+
+		Task t = tasks.iterator().next();
+
+		this.taskService.claim(t.getId(), "me");
+
+		logger.info( "sleeping for 10 seconds while a user performs his task. " +
+				"The first transaction has committed. A new one will start in 10 seconds");
+
+		Thread.sleep(1000 * 5);
+
+		this.taskService.complete(t.getId());
+
+		scopedObject = (StatefulObject) processEngine.getRuntimeService().getVariable(processInstance.getId(), "scopedTarget.c1");
+		Assert.assertEquals(scopedObject.getVisitedCount(), 3);
+
+		return scopedObject;
 	}
 
+	@Test
+	public void testUsingAnInjectedScopedProxy() throws Throwable {
+		logger.info("Running 'component-waiter' process instance with scoped beans.");
+		StatefulObject one = run();
+		StatefulObject two = run();
+		Assert.assertNotSame(one.getName(), two.getName());
+		Assert.assertEquals(one.getVisitedCount(), two.getVisitedCount());
+	}
 
+	@Test
+	public void testStartingAProcessWithScopedBeans() throws Throwable {
+		this.processInitiatingPojo.startScopedProcess( 3243);
+	}
 }

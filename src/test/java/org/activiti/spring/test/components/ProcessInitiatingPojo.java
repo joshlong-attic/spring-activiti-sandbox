@@ -58,4 +58,10 @@ public class ProcessInitiatingPojo {
 		return null;
 	}
 
+	@StartProcess(processKey = "component-waiter")
+	public void startScopedProcess( @ProcessVariable("customerId") long customerId){
+		log.info(" start scoped 'component-waiter' process.") ;
+	}
+
+
 }
