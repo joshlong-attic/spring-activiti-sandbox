@@ -45,6 +45,7 @@ import java.util.Map;
  * @author Josh Long
  * @since 5.3
  */
+@SuppressWarnings("unused") // registered through XML
 public class ActivitiStateAnnotationBeanPostProcessor implements BeanPostProcessor, BeanClassLoaderAware, BeanFactoryAware, InitializingBean, Ordered {
 
 	private volatile ActivitiStateHandlerRegistry registry;
