@@ -12,10 +12,6 @@ import java.io.Serializable;
 public class ScopedCustomer implements Serializable, InitializingBean{
 	public ScopedCustomer() {
 	}
-
-
-
-
 	public ScopedCustomer(String name) {
 		this.name = name;
 	}
