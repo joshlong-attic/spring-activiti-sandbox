@@ -49,7 +49,6 @@ public class ScopingTest {
 		Assert.assertEquals(scopedObject.getVisitedCount(), 2);
 
 		// the process has paused
-
 		String procId = processInstance.getProcessInstanceId();
 
 		List<Task> tasks = taskService.createTaskQuery().executionId(procId).list();
