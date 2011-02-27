@@ -1,6 +1,9 @@
 package org.activiti.spring.test.components.scope;
 
+import org.activiti.engine.runtime.ProcessInstance;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.Assert;
 
 import java.io.Serializable;
 import java.util.logging.Logger;
@@ -10,7 +13,7 @@ import java.util.logging.Logger;
  *
  * @author Josh Long
  */
-public class StatefulObject implements Serializable {
+public class StatefulObject implements Serializable,InitializingBean  {
 
 	private transient Logger logger = Logger.getLogger(getClass().getName());
 
@@ -24,10 +27,19 @@ public class StatefulObject implements Serializable {
 	public long getCustomerId() {
 		return customerId;
 	}
+
+	@Value("#{processInstance}") transient  ProcessInstance processInstance ;
+
+	@Value("#{executionId}") String executionId;
+
 	@Value("#{processVariables['customerId']}")
 	public void setCustomerId(long customerId) {
+
 		this.customerId = customerId;
-		logger.info("setting this " + StatefulObject.class.getName() + " instances 'customerId' to " + this.customerId);
+
+		logger.info("setting this " + StatefulObject.class.getName() + " instances 'customerId' to "
+				+ this.customerId +". The current executionId is "+ this.executionId);
+
 	}
 
 	public StatefulObject() {
@@ -77,4 +89,8 @@ public class StatefulObject implements Serializable {
 		this.name = name;
 	}
 
+	public void afterPropertiesSet() throws Exception {
+	 Assert.notNull(this.processInstance, "the processInstance should be equal to the currently active processInstance!");
+		logger.info("the 'processInstance' property is non-null: PI ID# "+ this.processInstance.getId());
+	}
 }

@@ -40,6 +40,7 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
@@ -120,32 +121,76 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 	}
 
 	public Object remove(String name) {
+
 		logger.fine("remove '" + name + "'");
 		return runtimeService.getVariable(getExecutionId(), name);
 	}
 
 	public Object resolveContextualObject(String key) {
 
-		if ("processInstance".equalsIgnoreCase(key)) {
-			return getExecutionId();
-		}
+		if ("executionId".equalsIgnoreCase(key))
+			return Context.getExecutionContext().getExecution().getId();
 
-		if ("processInstanceId".equalsIgnoreCase(key)) {
-			return getExecutionId();
-		}
+		if ("processInstance".equalsIgnoreCase(key))
+			return Context.getExecutionContext().getProcessInstance();
 
-		if ("processEngine".equalsIgnoreCase(key)) {
-			return this.processEngine;
-		}
+		if ("processInstanceId".equalsIgnoreCase(key))
+			return Context.getExecutionContext().getProcessInstance().getId();
+//
+//		if("processVariables".equalsIgnoreCase(key ))
+//			return processVariablesMap;
+//
 
 		return null;
+	}
+
+	/*public static EntityManager createSharedEntityManager(
+			EntityManagerFactory emf, Map properties, Class... entityManagerInterfaces) {
+
+		ClassLoader cl = null;
+		if (emf instanceof EntityManagerFactoryInfo) {
+			cl = ((EntityManagerFactoryInfo) emf).getBeanClassLoader();
+		}
+		Class[] ifcs = new Class[entityManagerInterfaces.length + 1];
+		System.arraycopy(entityManagerInterfaces, 0, ifcs, 0, entityManagerInterfaces.length);
+		ifcs[entityManagerInterfaces.length] = EntityManagerProxy.class;
+		return (EntityManager) Proxy.newProxyInstance(
+				(cl != null ? cl : SharedEntityManagerCreator.class.getClassLoader()),
+				ifcs, new SharedEntityManagerInvocationHandler(emf, properties));
+	}
+
+	*/
+
+	/**
+	 * creates a proxy that dispatches invocations to the currently bound {@link ProcessInstance}
+	 *
+	 * @return shareable {@link ProcessInstance}
+	 */
+	private Object createSharedProcessInstance()   {
+		ProxyFactory proxyFactoryBean = new ProxyFactory(ProcessInstance.class, new MethodInterceptor() {
+			public Object invoke(MethodInvocation methodInvocation) throws Throwable {
+				String methodName = methodInvocation.getMethod().getName() ;
+
+				logger.info("method invocation for " + methodName+ ".");
+				if(methodName.equals("toString"))
+					return "SharedProcessInstance";
+
+
+				ProcessInstance processInstance = Context.getExecutionContext().getProcessInstance();
+				Method method = methodInvocation.getMethod();
+				Object[] args = methodInvocation.getArguments();
+				Object result = method.invoke(processInstance, args);
+				return result;
+			}
+		});
+		return proxyFactoryBean.getProxy(this.classLoader);
 	}
 
 	public String getConversationId() {
 		return getExecutionId();
 	}
 
-	class ProcessVariableRegistry extends ConcurrentHashMap<String, Object> {
+	private final ConcurrentHashMap<String, Object> processVariablesMap = new ConcurrentHashMap<String, Object>() {
 		@Override
 		public java.lang.Object get(java.lang.Object o) {
 
@@ -160,7 +205,7 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 			}
 			throw new RuntimeException("no processVariable by the name of '" + varName + "' is available!");
 		}
-	}
+	};
 
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
 
@@ -181,7 +226,8 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 			}
 		}
 
-		beanFactory.registerSingleton(ProcessScope.PROCESS_SCOPE_PROCESS_VARIABLES_SINGLETON, new ProcessVariableRegistry());
+		beanFactory.registerSingleton(ProcessScope.PROCESS_SCOPE_PROCESS_VARIABLES_SINGLETON, this.processVariablesMap);
+		beanFactory.registerResolvableDependency(ProcessInstance.class,  createSharedProcessInstance());
 	}
 
 	public void destroy() throws Exception {
