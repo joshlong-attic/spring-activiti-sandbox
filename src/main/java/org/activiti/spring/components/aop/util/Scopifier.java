@@ -24,7 +24,7 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.util.StringValueResolver;
 
 /**
- * this class was borrowed wholesale from Spring 3.1's RefreshScope, which Dave Syer wrote.
+ * this class was copied wholesale from Spring 3.1's RefreshScope, which Dave Syer wrote.
  *
  * @author Dave Syer
  */

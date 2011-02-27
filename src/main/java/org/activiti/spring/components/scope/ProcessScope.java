@@ -40,19 +40,29 @@ import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 import java.io.Serializable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 /**
  * binds variables to a currently executing Activiti business process (a {@link org.activiti.engine.runtime.ProcessInstance}).
- *
+ * <p/>
  * Parts of this code are lifted wholesale from Dave Syer's work on the Spring 3.1 RefreshScope.
  *
  * @author Josh Long
  * @since 5.3
- *
  */
 public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostProcessor, DisposableBean {
 
+	/**
+	 * Map of the processVariables. Supports correct, scoped access to process variables so that
+	 * <code>
+	 *
+	 * @Value("#{ processVariables['customerId'] }") long customerId;
+	 * </code>
+	 * <p/>
+	 * works in any bean - scoped or not
+	 */
+	public final static String PROCESS_SCOPE_PROCESS_VARIABLES_SINGLETON = "processVariables";
 	public final static String PROCESS_SCOPE_NAME = "process";
 
 	private ClassLoader classLoader = ClassUtils.getDefaultClassLoader();
@@ -135,10 +145,28 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 		return getExecutionId();
 	}
 
+	class ProcessVariableRegistry extends ConcurrentHashMap<String, Object> {
+		@Override
+		public java.lang.Object get(java.lang.Object o) {
+
+			Assert.isInstanceOf(String.class, o, "the 'key' must be a String");
+
+			String varName = (String) o;
+
+			ProcessInstance processInstance = Context.getExecutionContext().getProcessInstance();
+			ExecutionEntity executionEntity = (ExecutionEntity) processInstance;
+			if (executionEntity.getVariableNames().contains(varName)) {
+				return executionEntity.getVariable(varName);
+			}
+			throw new RuntimeException("no processVariable by the name of '" + varName + "' is available!");
+		}
+	}
+
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+
 		beanFactory.registerScope(ProcessScope.PROCESS_SCOPE_NAME, this);
 
-		Assert.state(beanFactory instanceof BeanDefinitionRegistry, "BeanFactory was not a BeanDefinitionRegistry, so ProcessScope cannot be used.");
+		Assert.isInstanceOf(BeanDefinitionRegistry.class, beanFactory, "BeanFactory was not a BeanDefinitionRegistry, so ProcessScope cannot be used.");
 
 		BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 
@@ -152,6 +180,8 @@ public class ProcessScope implements Scope, InitializingBean, BeanFactoryPostPro
 				Scopifier.createScopedProxy(beanName, definition, registry, proxyTargetClass);
 			}
 		}
+
+		beanFactory.registerSingleton(ProcessScope.PROCESS_SCOPE_PROCESS_VARIABLES_SINGLETON, new ProcessVariableRegistry());
 	}
 
 	public void destroy() throws Exception {

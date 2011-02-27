@@ -14,7 +14,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.util.StringUtils;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -26,7 +28,8 @@ import java.util.logging.Logger;
 @ContextConfiguration("classpath:org/activiti/spring/test/components/ScopingTests-context.xml")
 public class ScopingTest {
 
-	@Autowired private ProcessInitiatingPojo processInitiatingPojo ;
+	@Autowired
+	private ProcessInitiatingPojo processInitiatingPojo;
 
 	private Logger logger = Logger.getLogger(getClass().getName());
 
@@ -40,9 +43,21 @@ public class ScopingTest {
 		this.taskService = this.processEngine.getTaskService();
 	}
 
+	static public long CUSTOMER_ID_PROC_VAR_VALUE = 343;
+
+	static public String customerIdProcVarName = "customerId";
+
+	/**
+	 * this code instantiates a business process that in turn delegates to a few Spring beans that in turn inject a process scoped object, {@link StatefulObject}.
+	 *
+	 * @return the StatefulObject that was injected across different components, that all share the same state.
+	 * @throws Throwable if anythign goes wrong
+	 */
 	private StatefulObject run() throws Throwable {
 		logger.info("----------------------------------------------");
-		ProcessInstance processInstance = processEngine.getRuntimeService().startProcessInstanceByKey("component-waiter");
+		Map<String, Object> vars = new HashMap<String, Object>();
+		vars.put(customerIdProcVarName, CUSTOMER_ID_PROC_VAR_VALUE);
+		ProcessInstance processInstance = processEngine.getRuntimeService().startProcessInstanceByKey("component-waiter", vars);
 		StatefulObject scopedObject = (StatefulObject) processEngine.getRuntimeService().getVariable(processInstance.getId(), "scopedTarget.c1");
 		Assert.assertNotNull("the scopedObject can't be null", scopedObject);
 		Assert.assertTrue("the 'name' property can't be null.", StringUtils.hasText(scopedObject.getName()));
@@ -59,7 +74,7 @@ public class ScopingTest {
 
 		this.taskService.claim(t.getId(), "me");
 
-		logger.info( "sleeping for 10 seconds while a user performs his task. " +
+		logger.info("sleeping for 10 seconds while a user performs his task. " +
 				"The first transaction has committed. A new one will start in 10 seconds");
 
 		Thread.sleep(1000 * 5);
@@ -69,6 +84,9 @@ public class ScopingTest {
 		scopedObject = (StatefulObject) processEngine.getRuntimeService().getVariable(processInstance.getId(), "scopedTarget.c1");
 		Assert.assertEquals(scopedObject.getVisitedCount(), 3);
 
+		Assert.assertEquals( "the customerId injected should " +
+					"be what was given as a processVariable parameter." ,
+				ScopingTest.CUSTOMER_ID_PROC_VAR_VALUE, scopedObject.getCustomerId()) ;
 		return scopedObject;
 	}
 
@@ -83,6 +101,6 @@ public class ScopingTest {
 
 	@Test
 	public void testStartingAProcessWithScopedBeans() throws Throwable {
-		this.processInitiatingPojo.startScopedProcess( 3243);
+		this.processInitiatingPojo.startScopedProcess(3243);
 	}
 }

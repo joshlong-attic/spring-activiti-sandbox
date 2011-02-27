@@ -1,5 +1,7 @@
 package org.activiti.spring.test.components.scope;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.Serializable;
 import java.util.logging.Logger;
 
@@ -16,6 +18,17 @@ public class StatefulObject implements Serializable {
 
 	private String name;
 	private int visitedCount = 0;
+
+	private long customerId;
+
+	public long getCustomerId() {
+		return customerId;
+	}
+	@Value("#{processVariables['customerId']}")
+	public void setCustomerId(long customerId) {
+		this.customerId = customerId;
+		logger.info("setting this " + StatefulObject.class.getName() + " instances 'customerId' to " + this.customerId);
+	}
 
 	public StatefulObject() {
 	}
